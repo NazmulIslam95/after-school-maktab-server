@@ -34,6 +34,9 @@ async function run() {
     const demoBookingsCollection = db.collection("demoBookings");
     const paymentHistoryCollection = db.collection("paymentHistory");
     const testimonialsCollection = db.collection("testimonials")
+    const pdfsCollection = db.collection("pdfs")
+
+
 
     // Middleware to verify JWT
     const verifyToken = (req, res, next) => {
@@ -1299,6 +1302,38 @@ async function run() {
         });
       }
     });
+    //----------------PDF Related Endpoints---------------//\
+    //post a new pdf
+    app.post('/pdf', verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const { name, driveLink, formattedLink, category } = req.body; // Accept formattedLink from frontend
+
+        const newPdf = {
+          name,
+          driveLink,
+          formattedLink, // Trust the frontend's formatting
+          category,
+          isHidden: false,
+          createdAt: new Date()
+        };
+
+        const result = await pdfsCollection.insertOne(newPdf);
+        res.status(201).json({ _id: result.insertedId, ...newPdf });
+      } catch (err) {
+        res.status(500).json({ error: 'Failed to upload PDF' });
+      }
+    });
+
+    //get all pdfs
+    app.get('/pdfs', async (req, res) => {
+      try {
+        const pdfs = await pdfsCollection.find().toArray();
+        res.status(200).json(pdfs);
+      } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch PDFs' });
+      }
+    });
+
 
 
   } catch (error) {
@@ -1315,5 +1350,5 @@ app.get("/", (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  //console.log(`After School Maktab is running on port ${port}`);
+  console.log(`After School Maktab is running on port ${port}`);
 });
