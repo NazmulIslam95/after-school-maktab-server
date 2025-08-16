@@ -1334,6 +1334,35 @@ async function run() {
       }
     });
 
+    app.delete("/pdf/:id", async (req, res) => {
+      const { id } = req.params;
+
+      try {
+        const result = await pdfsCollection.deleteOne({
+          _id: new ObjectId(id)
+        });
+
+        if (result.deletedCount === 1) {
+          res.status(200).json({
+            success: true,
+            message: "PDF deleted successfully"
+          });
+        } else {
+          res.status(404).json({
+            success: false,
+            message: "PDF not found"
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting PDF:", error);
+        res.status(500).json({
+          success: false,
+          message: "Failed to delete PDF",
+          error: error.message
+        });
+      }
+    });
+
 
 
   } catch (error) {
