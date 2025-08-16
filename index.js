@@ -991,6 +991,114 @@ async function run() {
       }
     });
 
+    app.patch('/studentReview/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { answers, comments } = req.body;
+
+        // 1. First check if review exists today
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const existingReview = await purchaseCollection.findOne({
+          _id: new ObjectId(id),
+          "studentReview": {
+            $elemMatch: {
+              createdAt: { $gte: todayStart, $lte: todayEnd }
+            }
+          }
+        });
+
+        if (existingReview) {
+          return res.status(400).json({
+            error: 'আপনি আজকে ইতিমধ্যে একটি রিভিউ দিয়েছেন! প্রতিদিন শুধুমাত্র একটি রিভিউ দেওয়া যাবে'
+          });
+        }
+
+        // 2. Proceed with adding review if no existing review today
+        const result = await purchaseCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $push: {
+              studentReview: {
+                answers,
+                comments,
+                createdAt: new Date()
+              }
+            }
+          }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).json({ error: 'Purchase খুঁজে পাওয়া যায়নি' });
+        }
+
+        res.json({ success: true, message: 'রিভিউ সাবমিট হয়েছে!' });
+
+      } catch (err) {
+        console.error('হয়রানি:', err);
+        res.status(500).json({ error: 'সার্ভার এরর' });
+      }
+    });
+
+    //tutor review option
+    app.patch('/tutorReview/:id', async (req, res) => {
+      try {
+        const id = req.params;
+        const { answers, comments } = req.body;
+
+        // 1. First check if review exists today
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const existingReview = await purchaseCollection.findOne({
+          _id: new ObjectId(id),
+          "studentReview": {
+            $elemMatch: {
+              createdAt: { $gte: todayStart, $lte: todayEnd }
+            }
+          }
+        });
+
+        if (existingReview) {
+          return res.status(400).json({
+            error: 'আপনি আজকে ইতিমধ্যে একটি রিভিউ দিয়েছেন!'
+          });
+        }
+
+
+        // Database operation
+        const result = await purchaseCollection.updateOne(
+          { _id: new ObjectId(id) }, // purchaseId দিয়ে খুঁজছি
+          {
+            $push: {
+              tutorReview: {
+                answers,
+                comments,
+                createdAt: new Date()
+              }
+            }
+          }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).json({ error: 'Purchase খুঁজে পাওয়া যায়নি' });
+        }
+
+        res.json({ success: true, message: 'রিভিউ সাবমিট হয়েছে!' });
+
+      } catch (err) {
+        console.error('হয়রানি:', err);
+        res.status(500).json({ error: 'সার্ভার এরর' });
+      }
+    });
+
     // ---------------- Demo Booking Endpoints ----------------
 
     // Get all demo bookings (admin or student)
