@@ -35,6 +35,7 @@ async function run() {
     const paymentHistoryCollection = db.collection("paymentHistory");
     const testimonialsCollection = db.collection("testimonials")
     const pdfsCollection = db.collection("pdfs")
+    const recentStudents = db.collection("recentStudents")
 
 
 
@@ -107,7 +108,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "24h",
       });
       res.send({ token });
     });
@@ -312,6 +313,48 @@ async function run() {
       }
     });
 
+    //get all recent students
+    app.get("/recentStudents", async (req, res) => {
+      try {
+        const result = await recentStudents.find().toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching recent students:", error);
+        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
+      }
+    });
+
+    //post a recent student
+    app.post("/newRecentStudent", verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const recentStudent = req.body;
+        const result = await recentStudents.insertOne(recentStudent);
+        res.status(201).send(result);
+      } catch (error) {
+        console.error("Error adding recent student:", error);
+        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
+      }
+    });
+
+    //delete a recent student
+    app.delete("/recentStudents/delete/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      try {
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ success: false, message: "Invalid ID format" });
+        }
+        const result = await recentStudents.deleteOne({ _id: new ObjectId(id) });
+        if (result.deletedCount > 0) {
+          res.send({ success: true, message: "Recent student deleted successfully" });
+        } else {
+          res.status(404).send({ success: false, message: "Recent student not found" });
+        }
+      } catch (error) {
+        console.error(`Error deleting recent student ${id}:`, error);
+        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
+      }
+    });
+
     //------------------------- Courses Endpoints ------------------------------//
     // Get all courses
     app.get("/allCourses", async (req, res) => {
@@ -323,6 +366,7 @@ async function run() {
         res.status(500).send({ success: false, message: `Server error: ${error.message}` });
       }
     });
+
 
     // Get course by ID
     app.get("/courses/:id", async (req, res) => {
