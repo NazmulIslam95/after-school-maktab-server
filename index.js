@@ -483,6 +483,21 @@ async function run() {
       }
     });
 
+    //get user by email (admin only)
+    app.get("/users/:email", verifyToken, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      try {
+        const user = await usersCollection.findOne({ email });
+        if (!user) {
+          return res.status(404).send({ success: false, message: "User not found" });
+        }
+        res.send(user);
+      } catch (error) {
+        console.error(`Error fetching user ${email}:`, error);
+        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
+      }
+    });
+
     // Check if current user is admin
     app.get("/users/isAdmin", verifyToken, async (req, res) => {
       const email = req.user?.email;
@@ -1035,6 +1050,31 @@ async function run() {
       }
     });
 
+    //edit purchase details (admin only)
+    app.patch("/purchases/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const updates = req.body;
+      try {
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ success: false, message: "Invalid ID format" });
+        }
+        const result = await purchaseCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updates }
+        );
+        if (result.modifiedCount > 0) {
+          res.send({ success: true, message: "Purchase updated" });
+        } else {
+          res.status(404).send({ success: false, message: "Purchase not found or no changes made" });
+        }
+      } catch (error) {
+        console.error(`Error updating purchase ${id}:`, error);
+        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
+      }
+    });
+
+
+    //student review option
     app.patch('/studentReview/:id', async (req, res) => {
       try {
         const { id } = req.params;
