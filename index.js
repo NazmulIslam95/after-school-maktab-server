@@ -484,7 +484,7 @@ async function run() {
     });
 
     //get user by email (admin only)
-    app.get("/users/:email", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users/user/:email", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       try {
         const user = await usersCollection.findOne({ email });
@@ -497,6 +497,7 @@ async function run() {
         res.status(500).send({ success: false, message: `Server error: ${error.message}` });
       }
     });
+
 
     // Check if current user is admin
     app.get("/users/isAdmin", verifyToken, async (req, res) => {
@@ -993,6 +994,31 @@ async function run() {
       }
     });
 
+    //edit a purchase details (admin only)
+    app.patch("/purchase/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const updates = req.body;
+      try {
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ success: false, message: "Invalid ID format" });
+        }
+        const result = await purchaseCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { ...updates, updatedAt: new Date() } }
+        );
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ success: false, message: "Purchase not found" });
+        }
+        res.send({
+          success: true,
+          message: result.modifiedCount > 0 ? "Purchase updated successfully" : "No changes made",
+        });
+      } catch (error) {
+        console.error(`Error updating purchase ${id}:`, error);
+        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
+      }
+    });
+
     // Confirm a purchase
     app.patch("/purchases/confirm/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
@@ -1050,31 +1076,6 @@ async function run() {
       }
     });
 
-    //edit purchase details (admin only)
-    app.patch("/purchases/:id", verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const updates = req.body;
-      try {
-        if (!ObjectId.isValid(id)) {
-          return res.status(400).send({ success: false, message: "Invalid ID format" });
-        }
-        const result = await purchaseCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updates }
-        );
-        if (result.modifiedCount > 0) {
-          res.send({ success: true, message: "Purchase updated" });
-        } else {
-          res.status(404).send({ success: false, message: "Purchase not found or no changes made" });
-        }
-      } catch (error) {
-        console.error(`Error updating purchase ${id}:`, error);
-        res.status(500).send({ success: false, message: `Server error: ${error.message}` });
-      }
-    });
-
-
-    //student review option
     app.patch('/studentReview/:id', async (req, res) => {
       try {
         const { id } = req.params;
